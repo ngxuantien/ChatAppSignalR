@@ -1,0 +1,195 @@
+﻿body {
+    font-family: Segoe UI, sans-serif;
+    display: flex;
+    height: 100vh;
+    margin: 0;
+    overflow: hidden;
+}
+
+/* GIAO DIỆN LOGIN */
+#loginOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: #f0f2f5;
+    z-index: 1000;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.login-box {
+    background: white;
+    padding: 40px;
+    border-radius: 8px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    width: 300px;
+    text-align: center;
+}
+
+    .login-box input {
+        width: 100%;
+        padding: 10px;
+        margin: 10px 0;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        box-sizing: border-box;
+    }
+
+    .login-box button {
+        width: 100%;
+        padding: 10px;
+        background: #0084ff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+        .login-box button:hover {
+            background: #0073e6;
+        }
+
+.error {
+    color: red;
+    margin-top: 10px;
+    font-size: 0.9em;
+    display: none;
+}
+
+/* GIAO DIỆN CHÍNH */
+#sidebar {
+    width: 250px;
+    border-right: 1px solid #ddd;
+    display: flex;
+    flex-direction: column;
+    background: white;
+}
+
+.header {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    background: #f8f9fa;
+    font-weight: bold;
+    color: #333;
+}
+
+#userList {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.user-item {
+    padding: 15px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    border-bottom: 1px solid #f1f1f1;
+}
+
+    .user-item:hover {
+        background: #f0f2f5;
+    }
+
+    .user-item.active {
+        background: #e7f3ff;
+    }
+
+.avatar {
+    width: 40px;
+    height: 40px;
+    background: #ddd;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 10px;
+    font-weight: bold;
+    color: #555;
+}
+
+#chatArea {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: white;
+}
+
+#chatTitle {
+    padding: 15px;
+    border-bottom: 1px solid #ddd;
+    font-weight: bold;
+    font-size: 1.1em;
+}
+
+#messages {
+    flex: 1;
+    padding: 20px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    background: #fff;
+}
+
+.message {
+    max-width: 60%;
+    padding: 10px 15px;
+    border-radius: 20px;
+    font-size: 14px;
+    line-height: 1.4;
+    position: relative;
+}
+
+.msg-in {
+    background: #e4e6eb;
+    align-self: flex-start;
+    color: black;
+    border-bottom-left-radius: 2px;
+}
+
+.msg-out {
+    background: #0084ff;
+    align-self: flex-end;
+    color: white;
+    border-bottom-right-radius: 2px;
+}
+
+.sender-name {
+    font-size: 0.75em;
+    margin-bottom: 2px;
+    opacity: 0.7;
+    display: block;
+}
+
+.input-area {
+    padding: 20px;
+    border-top: 1px solid #ddd;
+    display: flex;
+    gap: 10px;
+}
+
+    .input-area input {
+        flex: 1;
+        padding: 10px;
+        border-radius: 20px;
+        border: 1px solid #ddd;
+        outline: none;
+    }
+
+    .input-area button {
+        padding: 10px 20px;
+        border-radius: 20px;
+        border: none;
+        background: #0084ff;
+        color: white;
+        cursor: pointer;
+        font-weight: bold;
+    }
+
+        .input-area button:disabled {
+            background: #ccc;
+        }

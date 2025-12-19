@@ -1,0 +1,203 @@
+﻿<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <title>Chat System .NET</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/microsoft-signalr/8.0.0/signalr.min.js"></script>
+    <link rel="stylesheet" href="chat.css" />
+</head>
+<body>
+
+    <div id="loginOverlay">
+        <div class="login-box">
+            <h2>Đăng Nhập</h2>
+            <input type="text" id="username" placeholder="Tên đăng nhập">
+            <input type="password" id="password" placeholder="Mật khẩu">
+            <button onclick="login()">Vào Chat</button>
+            <div id="loginError" class="error"></div>
+        </div>
+    </div>
+
+    <div id="sidebar">
+        <div class="header">Danh bạ Online <span id="myName" style="font-weight:normal; font-size:0.8em; color:#666"></span></div>
+        <div id="userList">
+            <div style="padding:20px; text-align:center; color:#999">Đang tải...</div>
+        </div>
+    </div>
+
+    <div id="chatArea">
+        <div id="chatTitle">Chọn một người để chat</div>
+        <div id="messages"></div>
+        <div class="input-area">
+            <input type="text" id="msgInput" placeholder="Nhập tin nhắn..." disabled onkeypress="handleEnter(event)">
+            <button id="sendBtn" onclick="sendMessage()" disabled>Gửi</button>
+        </div>
+    </div>
+
+    <script>
+        let token = "";
+        let currentUserId = null; // ID của người mình đang chat cùng
+        let connection = null;
+        let myUserName = "";
+
+        // --- HÀM 1: ĐĂNG NHẬP ---
+        async function login() {
+            const user = document.getElementById("username").value;
+            const pass = document.getElementById("password").value;
+            const errorDiv = document.getElementById("loginError");
+
+            try {
+                // Gọi API Login
+                const res = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username: user, password: pass })
+                });
+
+                if (!res.ok) {
+                    const text = await res.text();
+                    errorDiv.innerText = text || "Đăng nhập thất bại!";
+                    errorDiv.style.display = 'block';
+                    return;
+                }
+
+                // Lấy Token thành công
+                const data = await res.json();
+                token = data.token;
+                myUserName = user;
+
+                // Ẩn màn hình login, hiện giao diện chat
+                document.getElementById("loginOverlay").style.display = 'none';
+                document.getElementById("myName").innerText = `(${user})`;
+
+                // Bắt đầu các kết nối
+                connectSignalR();
+                loadUserList();
+
+            } catch (err) {
+                errorDiv.innerText = "Lỗi kết nối Server!";
+                errorDiv.style.display = 'block';
+                console.error(err);
+            }
+        }
+
+        // --- HÀM 2: LẤY DANH SÁCH USER (CÓ GỬI TOKEN) ---
+        async function loadUserList() {
+            try {
+                const res = await fetch('/api/chat/users', {
+                    method: 'GET',
+                    headers: {
+                        // QUAN TRỌNG: Gửi Token vào Header
+                        'Authorization': 'Bearer ' + token
+                    }
+                });
+
+                if (res.status === 401) {
+                    alert("Token hết hạn, vui lòng F5 đăng nhập lại");
+                    return;
+                }
+
+                const users = await res.json();
+                const listDiv = document.getElementById("userList");
+                listDiv.innerHTML = "";
+
+                if (users.length === 0) {
+                    listDiv.innerHTML = "<div style='padding:20px; text-align:center; color:#999'>Không có ai khác online :(</div>";
+                    return;
+                }
+
+                users.forEach(u => {
+                    const div = document.createElement("div");
+                    div.className = "user-item";
+                    div.onclick = () => selectUser(u.id, u.username, div);
+                    div.innerHTML = `
+                            <div class="avatar">${u.username.charAt(0).toUpperCase()}</div>
+                            <span>${u.username}</span>
+                        `;
+                    listDiv.appendChild(div);
+                });
+
+            } catch (err) {
+                console.error("Lỗi tải danh sách user:", err);
+            }
+        }
+
+        // --- HÀM 3: KẾT NỐI SIGNALR (CÓ GỬI TOKEN) ---
+        function connectSignalR() {
+            connection = new signalR.HubConnectionBuilder()
+                .withUrl("/chatHub", {
+                    // QUAN TRỌNG: Gửi Token qua WebSocket
+                    accessTokenFactory: () => token
+                })
+                .withAutomaticReconnect()
+                .build();
+
+            // Lắng nghe tin nhắn từ Server gửi về
+            connection.on("ReceivePrivate", (senderId, senderName, msg) => {
+                // Nếu tin nhắn từ người mình đang chat -> Hiện lên
+                if (currentUserId && senderId == currentUserId) {
+                    appendMessage(msg, 'in', senderName);
+                }
+                // Nếu là tin nhắn của chính mình (Server gửi lại xác nhận)
+                else if (senderName === myUserName) {
+                    appendMessage(msg, 'out', 'Tôi');
+                }
+                // Nếu tin từ người lạ -> Chỉ log hoặc hiện thông báo nhỏ
+                else {
+                    console.log(`Tin nhắn mới từ ${senderName}: ${msg}`);
+                    // Bạn có thể thêm code đổi màu user trong danh sách để báo tin mới
+                }
+            });
+
+            connection.start()
+                .then(() => console.log("Đã kết nối SignalR"))
+                .catch(err => console.error("Lỗi SignalR:", err));
+        }
+
+        // --- HÀM 4: GỬI TIN NHẮN ---
+        function sendMessage() {
+            const input = document.getElementById("msgInput");
+            const msg = input.value.trim();
+
+            if (!msg || !currentUserId) return;
+
+            // Gọi hàm SendPrivateMessage bên Backend
+            connection.invoke("SendPrivateMessage", currentUserId.toString(), msg)
+                .catch(err => console.error(err));
+
+            input.value = "";
+            input.focus();
+        }
+
+        // --- CÁC HÀM HỖ TRỢ GIAO DIỆN ---
+        function selectUser(id, name, element) {
+            currentUserId = id;
+            document.getElementById("chatTitle").innerText = "Đang chat với: " + name;
+            document.getElementById("messages").innerHTML = ""; // Xóa chat cũ
+
+            // Xử lý giao diện active
+            document.querySelectorAll('.user-item').forEach(e => e.classList.remove('active'));
+            element.classList.add('active');
+
+            // Mở khóa nhập liệu
+            document.getElementById("msgInput").disabled = false;
+            document.getElementById("sendBtn").disabled = false;
+            document.getElementById("msgInput").focus();
+        }
+
+        function appendMessage(text, type, sender) {
+            const msgDiv = document.createElement("div");
+            msgDiv.className = `message msg-${type}`;
+            msgDiv.innerHTML = `<span class="sender-name">${sender}</span>${text}`;
+
+            const box = document.getElementById("messages");
+            box.appendChild(msgDiv);
+            box.scrollTop = box.scrollHeight; // Tự cuộn xuống cuối
+        }
+
+        function handleEnter(e) {
+            if (e.key === 'Enter') sendMessage();
+        }
+    </script>
+</body>
+</html>

@@ -28,7 +28,7 @@ namespace ChatApp.Controllers
             var user = new User
             {
                 Username = dto.Username,
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.PasswordHash)
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(dto.Password)
             };
 
             _context.Users.Add(user);
@@ -40,11 +40,11 @@ namespace ChatApp.Controllers
         public ActionResult Login([FromBody] UserDto dto)
         {
             var user = _context.Users.FirstOrDefault(u => u.Username == dto.Username);
-            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.PasswordHash, user.PasswordHash))
+            if (user == null || !BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash))
                 return Unauthorized("Sai tai khoan hoac mat khau");
 
             var token = GenerateToken(user);
-            return Ok(token);
+            return Ok (new { token = token });
         }
 
         private string GenerateToken(User user)
